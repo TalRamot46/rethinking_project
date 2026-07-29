@@ -1,0 +1,2 @@
+                     model     WAIC  SE_WAIC    pWAIC    LOOIC   p_loo bad_k
+1 m2 Approach B (binomial) 3057.893 64.09509 265.3735 3168.028 320.441   155

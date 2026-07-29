@@ -1,0 +1,20 @@
+# ---- Raw Airbnb data dumps ----
+# These exceed GitHub's hard 100 MB per-file limit and must never be pushed:
+#   listings.csv  ~213 MiB
+#   reviews.csv   ~665 MiB
+# rethinking_ratings_extension.R falls back to a synthetic generator when
+# listings.csv is absent, so the script still runs without them.
+listings.csv
+reviews.csv
+
+# ---- R session artifacts ----
+.Rhistory
+.RData
+.Rapp.history
+.Rproj.user/
+*.Rproj
+
+# ---- Stan / cmdstanr build artifacts ----
+*.stan
+*.exe
+*.hpp
