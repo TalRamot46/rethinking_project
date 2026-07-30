@@ -18,7 +18,7 @@
 #  Fast smoke test:  RETHINK_SMOKE=1 Rscript rethinking_ratings_extension.R
 #
 # -----------------------------------------------------------------------------
-#  FOUR THINGS TO KNOW BEFORE READING THE RESULTS
+#  FIVE THINGS TO KNOW BEFORE READING THE RESULTS
 #
 #  (1) ONE ROW PER LISTING. In listings.csv, `id` is unique, so every listing
 #      cluster holds exactly ONE observation. This is not a defect -- it is
@@ -67,8 +67,7 @@ suppressPackageStartupMessages({
   library(loo)
 })
 
-# ---- 0. Configuration ------------------------
-# ---- 0. Configuration ------------------------
+# ---- 0. Configuration -------------------------------------------------------
 CFG <- list(
   csv_path    = "listings.csv",
   out_dir     = "outputs",
