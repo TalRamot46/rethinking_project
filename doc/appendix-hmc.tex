@@ -1,0 +1,272 @@
+%==============================================================================
+%  Appendix: Fundamentals of Hamiltonian Monte Carlo
+%  Companion to "Multilevel Models for Airbnb Ratings"
+%
+%  Standalone: pdflatex appendix-hmc.tex
+%  Or drop into report.tex with \input{appendix-hmc-body} after \appendix.
+%==============================================================================
+\documentclass[10pt,a4paper]{article}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[top=0.65in,bottom=0.7in,left=0.85in,right=0.85in]{geometry}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{enumitem}
+\usepackage[compact]{titlesec}
+
+\titlespacing*{\section}{0pt}{6pt}{3pt}
+
+\setlist{nosep,leftmargin=*}
+\setlength{\parskip}{0pt}
+
+% the document is mostly displayed mathematics; the default skips around
+% displays are what push it past two pages
+\setlength{\abovedisplayskip}{4pt}
+\setlength{\belowdisplayskip}{4pt}
+\setlength{\abovedisplayshortskip}{2pt}
+\setlength{\belowdisplayshortskip}{2pt}
+
+\theoremstyle{definition}
+\newtheorem*{defn}{Definition}
+\newtheorem*{thm}{Theorem}
+\newtheorem*{prop}{Proposition}
+
+% compact framed block for the algorithm
+\newenvironment{algobox}[1]{%
+  \par\vspace{3pt}\begin{center}\begin{minipage}{0.97\textwidth}%
+  \rule{\linewidth}{0.8pt}\vspace{1pt}\par\textbf{#1}\par\vspace{1pt}\small
+}{%
+  \par\vspace{1pt}\rule{\linewidth}{0.8pt}\end{minipage}\end{center}\vspace{3pt}\par
+}
+
+\title{\vspace{-2em}\textbf{Appendix: Fundamentals of Hamiltonian Monte Carlo
+       for Bayesian Posterior Sampling}}
+\author{}
+\date{}
+
+\begin{document}
+\maketitle
+\vspace{-3em}
+
+%==============================================================================
+\section{From Markov Chains to Metropolis--Hastings}
+%==============================================================================
+
+We wish to draw from a target $\pi(x) = f(x)/Z$ on $\mathbb{R}^D$, where $f$ can
+be evaluated pointwise but the normaliser $Z = \int f(x)\,dx$ cannot. MCMC gives
+up on sampling $\pi$ directly and instead builds a Markov chain that visits
+states in proportion to $\pi$.
+
+\begin{defn}[Markov chain and invariance]
+A Markov chain on $\mathbb{R}^D$ is specified by a transition kernel
+$T(x \to x')$, the density of moving to $x'$ from $x$. A distribution $\pi$ is
+\emph{invariant} (stationary) for $T$ if
+$\int \pi(x)\, T(x \to x')\, dx = \pi(x')$. The design problem is to construct a
+$T$ whose invariant distribution is the $\pi$ we want.
+\end{defn}
+
+\paragraph{Metropolis--Hastings.} From the current state $x$, draw a proposal
+$x^{*} \sim q(x^{*} \mid x)$ and accept it with probability
+\[
+  \alpha(x \to x^{*})
+  = \min\!\left(1,\; \frac{f(x^{*})\, q(x \mid x^{*})}
+                          {f(x)\, q(x^{*} \mid x)}\right),
+\]
+otherwise remain at $x$. The target enters only through the \emph{ratio}
+$f(x^{*})/f(x)$, so the intractable $Z$ cancels. This is the single fact that
+makes Bayesian computation possible at all.
+
+\begin{defn}[Detailed balance]
+$T$ satisfies detailed balance with respect to $\pi$ if
+$\pi(x)\, T(x \to x') = \pi(x')\, T(x' \to x)$ for all $x, x'$.
+\end{defn}
+
+\begin{prop}
+Detailed balance implies invariance: integrating both sides over $x$ gives
+$\int \pi(x) T(x \to x')\,dx = \pi(x') \int T(x' \to x)\,dx = \pi(x')$, since
+$T(x' \to \cdot)$ is a density. Metropolis--Hastings is constructed to satisfy
+detailed balance, which is why it is correct for \emph{any} proposal $q$.
+\end{prop}
+
+\paragraph{The curse of dimensionality.} Correct is not efficient. In high
+dimension the posterior mass does not sit near the mode but concentrates on a
+thin shell --- the \emph{typical set} --- at radius $O(\sqrt{D})$, since the
+density falls off while the volume element grows like $r^{D-1}$. An isotropic
+random-walk proposal $\mathcal{N}(x, \epsilon^{2}I)$ almost always steps off
+that shell into negligible density, so acceptance decays exponentially in $D$
+unless $\epsilon \propto D^{-1/2}$. Shrinking $\epsilon$ makes the chain
+diffuse: the iterations needed per effectively independent draw grow like
+$O(D)$. The sampler can only shuffle along a shell it should be traversing.
+
+%==============================================================================
+\section{Hamiltonian Monte Carlo}
+%==============================================================================
+
+HMC removes the random walk by giving the chain \emph{momentum}, so that a
+single proposal can traverse the typical set rather than jitter within it.
+
+\paragraph{Phase space.} Augment the position $\boldsymbol{\theta} \in
+\mathbb{R}^{D}$ with an auxiliary momentum $\mathbf{p} \sim
+\mathcal{N}(\mathbf{0}, \mathbf{M})$, giving a $2D$-dimensional phase space.
+Define the \emph{Hamiltonian}
+\[
+  H(\boldsymbol{\theta}, \mathbf{p}) = U(\boldsymbol{\theta}) + K(\mathbf{p}),
+  \qquad
+  U(\boldsymbol{\theta}) = -\ln f(\boldsymbol{\theta}),
+  \qquad
+  K(\mathbf{p}) = \tfrac{1}{2}\mathbf{p}^{\!\top}\mathbf{M}^{-1}\mathbf{p}.
+\]
+The joint density $\pi(\boldsymbol{\theta}, \mathbf{p}) \propto
+\exp\{-H(\boldsymbol{\theta}, \mathbf{p})\}$ factorises, so its
+$\boldsymbol{\theta}$-marginal is exactly the target. Momentum is scaffolding:
+it is resampled each iteration and discarded.
+
+\paragraph{Intuition.} $U$ is a landscape whose valleys are regions of high
+posterior density, and the state is a frictionless puck on it. Kicked in a
+random direction, the puck climbs slopes and turns back under its own momentum,
+sweeping along a contour of constant total energy --- covering long distances
+\emph{within} the typical set instead of jittering across it.
+
+\begin{defn}[Hamilton's equations]
+\[
+  \frac{d\boldsymbol{\theta}}{dt} = \frac{\partial H}{\partial \mathbf{p}}
+    = \mathbf{M}^{-1}\mathbf{p},
+  \qquad
+  \frac{d\mathbf{p}}{dt} = -\frac{\partial H}{\partial \boldsymbol{\theta}}
+    = -\nabla U(\boldsymbol{\theta}).
+\]
+Write $\Phi_{t}$ for the flow map carrying $(\boldsymbol{\theta}(0),
+\mathbf{p}(0))$ to $(\boldsymbol{\theta}(t), \mathbf{p}(t))$.
+\end{defn}
+
+\begin{thm}[Conservation of energy]
+Along any solution, $\frac{dH}{dt} = 0$; hence
+$H(\boldsymbol{\theta}(t), \mathbf{p}(t)) =
+ H(\boldsymbol{\theta}(0), \mathbf{p}(0))$ for all $t$.
+\end{thm}
+
+\begin{thm}[Liouville's theorem]
+The vector field of Hamilton's equations is divergence-free, so $\Phi_{t}$
+preserves phase-space volume: $\det J_{\Phi_{t}} = 1$ for all $t$.
+\end{thm}
+
+These two facts are what a Metropolis correction needs. A proposal generated by
+running $\Phi_{L}$ then negating the momentum is a deterministic involution,
+hence reversible, with acceptance ratio
+\[
+  \alpha = \min\!\Big(1,\;
+    \exp\{-H(\boldsymbol{\theta}^{*}, \mathbf{p}^{*})
+          + H(\boldsymbol{\theta}_{0}, \mathbf{p}_{0})\}
+    \cdot \big|\det J_{\Phi_{L}}\big| \Big).
+\]
+Liouville's theorem sets the Jacobian to $1$; conservation of energy sets the
+exponent to $0$. So an \emph{exact} Hamiltonian trajectory is accepted with
+probability $1$, no matter how far it travels.
+
+%==============================================================================
+\section{Bayesian Inference and the Complete Algorithm}
+%==============================================================================
+
+\paragraph{The posterior challenge.} For parameters $\boldsymbol{\theta}$ and
+data $\mathcal{D}$,
+\[
+  p(\boldsymbol{\theta} \mid \mathcal{D})
+  = \frac{p(\mathcal{D} \mid \boldsymbol{\theta})\, p(\boldsymbol{\theta})}
+         {\int p(\mathcal{D} \mid \boldsymbol{\theta})\,
+                p(\boldsymbol{\theta})\, d\boldsymbol{\theta}}
+  = \frac{f(\boldsymbol{\theta})}{Z}.
+\]
+The evidence $Z = p(\mathcal{D})$ is a $D$-dimensional integral: grid quadrature
+costs $O(k^{D})$, and conjugate updates do not exist for hierarchical models
+with non-conjugate likelihoods. But HMC needs only
+\[
+  U(\boldsymbol{\theta}) = -\ln p(\mathcal{D} \mid \boldsymbol{\theta})
+                           - \ln p(\boldsymbol{\theta}),
+\]
+and its gradient, both computable without $Z$.
+
+\paragraph{Leapfrog integration.} Hamilton's equations rarely have closed-form
+solutions, so the flow is approximated in steps of size $\epsilon$ by the
+\emph{leapfrog} (Störmer--Verlet) scheme --- half a momentum kick, a full
+position drift, and a second half kick:
+\begin{align*}
+  \mathbf{p}(t + \tfrac{\epsilon}{2})
+    &= \mathbf{p}(t) - \tfrac{\epsilon}{2}\nabla U(\boldsymbol{\theta}(t)),\\
+  \boldsymbol{\theta}(t + \epsilon)
+    &= \boldsymbol{\theta}(t)
+       + \epsilon\, \mathbf{M}^{-1}\mathbf{p}(t + \tfrac{\epsilon}{2}),\\
+  \mathbf{p}(t + \epsilon)
+    &= \mathbf{p}(t + \tfrac{\epsilon}{2})
+       - \tfrac{\epsilon}{2}\nabla U(\boldsymbol{\theta}(t + \epsilon)).
+\end{align*}
+
+\begin{thm}[Symplecticity and the shadow Hamiltonian]
+Each leapfrog step is a composition of shear maps, so it preserves phase volume
+\emph{exactly} ($\det J = 1$) and is time-reversible. Being symplectic, it
+conserves exactly a nearby \emph{shadow Hamiltonian}
+$\tilde{H} = H + \mathcal{O}(\epsilon^{2})$, so energy error stays bounded over
+arbitrarily long trajectories instead of accumulating. Forward Euler, by
+contrast, has $\det J \neq 1$ and no shadow Hamiltonian: its energy drifts
+monotonically and trajectories spiral away.
+\end{thm}
+
+Because volume preservation and reversibility hold \emph{exactly} for leapfrog,
+the Metropolis correction below restores exactness for any $\epsilon$; the step
+size affects only efficiency, through the acceptance rate.
+
+\begin{algobox}{Hamiltonian Monte Carlo}
+\textbf{Input:} initial state $\boldsymbol{\theta}^{(0)}$, trajectory length
+$L$, step size $\epsilon$, mass matrix $\mathbf{M}$.
+
+\smallskip
+\textbf{For} $s = 1, \dots, S$:
+\begin{enumerate}
+  \item Sample fresh momentum
+        $\mathbf{p}^{(s)} \sim \mathcal{N}(\mathbf{0}, \mathbf{M})$.
+  \item Set $(\boldsymbol{\theta}_{0}, \mathbf{p}_{0})
+        = (\boldsymbol{\theta}^{(s-1)}, \mathbf{p}^{(s)})$.
+  \item Run $L$ leapfrog steps of size $\epsilon$ using
+        $\nabla U(\boldsymbol{\theta})$ to obtain
+        $(\boldsymbol{\theta}^{*}, \mathbf{p}^{*})$.
+  \item Compute
+        $\alpha = \min\!\big(1, \exp\{-H(\boldsymbol{\theta}^{*}, \mathbf{p}^{*})
+        + H(\boldsymbol{\theta}_{0}, \mathbf{p}_{0})\}\big)$.
+  \item With probability $\alpha$ set
+        $\boldsymbol{\theta}^{(s)} = \boldsymbol{\theta}^{*}$;
+        otherwise $\boldsymbol{\theta}^{(s)} = \boldsymbol{\theta}^{(s-1)}$.
+\end{enumerate}
+\textbf{Output:} draws $\boldsymbol{\theta}^{(1)}, \dots,
+\boldsymbol{\theta}^{(S)}$.
+\end{algobox}
+
+\paragraph{From draws to summaries.} The output is an $S \times D$ matrix whose
+rows are dependent but marginally distributed as the posterior.
+
+\begin{thm}[Ergodic theorem for MCMC]
+If the chain is irreducible and aperiodic with invariant distribution
+$p(\boldsymbol{\theta} \mid \mathcal{D})$, then for any integrable $g$,
+\[
+  \frac{1}{S}\sum_{s=1}^{S} g\big(\boldsymbol{\theta}^{(s)}\big)
+  \;\xrightarrow[S \to \infty]{\text{a.s.}}\;
+  \mathbb{E}_{p(\boldsymbol{\theta} \mid \mathcal{D})}
+    \big[g(\boldsymbol{\theta})\big].
+\]
+\end{thm}
+
+This licenses every number in the main report. For the multilevel model
+$\alpha_{j} \sim \mathrm{Normal}(\bar\alpha, \sigma)$, a listing's posterior
+mean intercept is the column average of that $\alpha_{j}$, an $89\%$ credible
+interval is the corresponding pair of column quantiles, and a derived quantity
+--- $\mathrm{logit}^{-1}(\alpha_{j})$, or a prediction for an unseen listing
+$\mathrm{logit}^{-1}(\bar\alpha + z\sigma)$ --- is estimated by transforming
+row-wise and \emph{then} averaging. The order matters: averaging first
+estimates a different quantity, since $\mathrm{logit}^{-1}$ is non-linear.
+
+Two caveats follow. The guarantee is asymptotic, so $n_{\text{eff}}$ must be
+reported alongside it. And a \emph{divergent transition} signals that leapfrog
+has broken down: where the posterior curves more sharply than $\epsilon$ can
+resolve, $\tilde{H}$ stops tracking $H$ and the region is under-explored, so
+divergences indicate bias rather than mere inefficiency --- which is why the
+main report reparameterises instead of ignoring them.
+
+\end{document}
