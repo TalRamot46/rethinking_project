@@ -73,7 +73,7 @@
 \vspace{-2.5em}
 
 %==============================================================================
-\section{Introduction - The Problem: Ratings are biased by the number of reviews}
+\section{The Problem: A Rating Is Only as Precise as Its Review Count}
 %==============================================================================
 
 A listing with one review rated $5.0$ is not better than a listing with four
@@ -110,7 +110,7 @@ listing borrows from the others should depend on how little evidence it has of i
 report, we will showcase this principle using the above Airbnb data.
 
 %==============================================================================
-\section{A cool analogy to the Reed frog model}
+\section{Reviews as Trials: The Reed-Frog Model in Disguise}
 %==============================================================================
 
 Suppose each review comes from a customer who either had a positive experience
@@ -138,9 +138,24 @@ The analysis below uses $200$ listings, $40$ drawn from each of the five review
 count bands above, carrying $5{,}563$ reviews between them with a median of $8$
 per listing. 
 
-\section{Two models}
+\section{Three Models, One Question: How Much Should Listings Share?}
 
-\paragraph{No pooling.} Every listing gets its own intercept, and the intercepts
+The three models below differ in exactly one respect: how much one listing's
+intercept is allowed to know about the others'. That single axis - from
+\emph{everything} to \emph{nothing} to \emph{as much as the data support} - is
+the whole content of Chapter 13.
+
+\paragraph{Complete pooling.} One intercept for all two hundred listings at
+once. The model asserts that listings do not differ, and that every gap between
+them is sampling noise:
+\[
+  P_i \sim \text{Binomial}(N_i, p_i), \qquad
+  \text{logit}(p_i) = \alpha, \qquad
+  \alpha \sim \text{Normal}(0, 1.5).
+\]
+
+\paragraph{No pooling.} The opposite extreme. Every listing gets its own
+intercept, and the intercepts
 know nothing about each other (according to Ch. 13, this model has \textit{Amnesia}):
 \[
   P_i \sim \text{Binomial}(N_i, p_i), \qquad
@@ -148,8 +163,8 @@ know nothing about each other (according to Ch. 13, this model has \textit{Amnes
   \alpha_j \sim \text{Normal}(0, 1.5).
 \]
 
-\paragraph{Partial pooling.} The prior over the intercepts is itself estimated
-from the data:
+\paragraph{Partial pooling.} In between: the prior over the intercepts is itself
+estimated from the data:
 \[
   P_i \sim \text{Binomial}(N_i, p_i), \qquad
   \text{logit}(p_i) = \alpha_{\text{listing}[i]},
@@ -166,11 +181,19 @@ the less flexible of the two, and that apparent contradiction is the whole
 lesson of Ch. 13 - \underline{instructive models can be more flexible} than their more naive cousins, despite actually having more parameters.
 \end{notebox}
 Model names below follow the book. In the code they are spelled out:
-\texttt{m13.1} is \texttt{no\_pooling}, \texttt{m13.1b} is
-\texttt{no\_pooling\_flat}, and \texttt{m13.2} is \texttt{partial}, all defined
-in \texttt{src/03-models.R} in the attached code.
+\texttt{m13.0} is \texttt{complete\_pooling}, \texttt{m13.1} is
+\texttt{no\_pooling}, \texttt{m13.1b} is \texttt{no\_pooling\_flat}, and
+\texttt{m13.2} is \texttt{partial}, all defined in \texttt{src/03-models.R} in
+the attached code.
 
 \begin{lstlisting}
+m13.0 <- ulam(
+  alist(
+    P ~ dbinom( N , p ),
+    logit(p) <- a,
+    a ~ dnorm( 0 , 1.5 )
+  ), data=dat , chains=4 , log_lik=TRUE )
+
 m13.1 <- ulam(
   alist(
     P ~ dbinom( N , p ),
@@ -188,16 +211,17 @@ m13.2 <- ulam(
   ), data=dat , chains=4 , log_lik=TRUE )
 \end{lstlisting}
 
-\todo{One warning about the fixed prior. Ratings here sit near $4.79$, which means
-$p \approx 0.947$ and $\text{logit}(p) \approx 2.9$. A $\text{Normal}(0,1.5)$
-prior places the typical listing almost two standard deviations from its own
-mean, so it is not a weak prior on this scale; it pulls every listing toward
+\paragraph{A sensitivity check on the fixed prior.} The $\text{Normal}(0,1.5)$
+that \texttt{m13.0} and \texttt{m13.1} use is the book's, but it is not weak on
+this scale. Ratings here sit near $4.79$, which means $p \approx 0.947$ and
+$\text{logit}(p) \approx 2.9$: the prior places the typical listing almost two
+standard deviations from its own mean, and so pulls every listing toward
 $p = 0.5$. To check that the comparison below is not an artifact of that, a
-third model \texttt{m13.1b} was fitted, identical to \texttt{m13.1} but with
-$\alpha_j \sim \text{Normal}(0,5)$, which really is flat.}
+fourth fit \texttt{m13.1b} was run, identical to \texttt{m13.1} but with
+$\alpha_j \sim \text{Normal}(0,5)$, which really is flat.
 
 %==============================================================================
-\section{Fitting the model: geometry, not arithmetic}
+\section{Fitting the Model: The Funnel and the Non-Centered Fix}
 %==============================================================================
 
 \paragraph{Our case's Devil's Funnel.} The multilevel model is harder to sample than it looks. The difficulty is that
@@ -254,6 +278,8 @@ $2{,}000$ samples that gave the non-centered model $714$. Reparameterizing
 bought nearly a \underline{$\times 5$ improvement} in the precision of $\sigma$ for no extra
 computation, which will soon be explained through the trace \& "trank" (trace-rank as McElreath calls them, liked that nickname) plots.
 
+\subsection{Reading the sampler diagnostics}
+
 \begin{infobox}{What the diagnostics mean}
 \textbf{Divergent transitions.} Stan simulates a physical trajectory across the
 posterior (read my appendix!). When the surface curves more sharply than the step size can follow,
@@ -283,7 +309,7 @@ Compares between-chain variance ($B$) to within-chain variance ($W$) across $M$ 
 Adjusts total MCMC samples $S$ for autocorrelation $\rho_k$ at lag $k$ between successive iterations. It calculates the equivalent number of completely independent draws, directly measuring the actual statistical precision delivered by the Markov chain. The last two quantities are explained intuitively in \cite{mcelreath2023_lecture09} around minute 58:00.
 \end{infobox}
 
-\subsection{Trace plots}
+\subsection{Trace plots: what a healthy chain looks like}
 
 A trace plot draws each of the Markov chain's path over the iterations (e.g. the graph that records the value of each parameter across the iterations). What we want aim to see is what
 McElreath calls "a fuzzy caterpillar": the chains should sit in the same
@@ -305,7 +331,7 @@ the same information, which is exactly what a low effective sample size
 reports.}
 \end{figure}
 
-\subsection{Trace rank plots}
+\subsection{Trace-rank plots: the same problem, seen better}
 
 Trace plots become hard to read once four chains overlap, because the ink piles
 up and a chain that is slightly wrong is hidden behind three that are right. A
@@ -339,8 +365,17 @@ much more evenly.}
 \end{figure}
 
 %==============================================================================
-\section{What the model estimates}
+\section{What Partial Pooling Buys: A Population, Not Just 200 Intercepts}
 %==============================================================================
+
+A no-pooling model hands back two hundred numbers. A partial-pooling model hands
+back two hundred numbers \emph{and the distribution they were drawn from}, and
+that distribution is what lets it say anything at all about a listing it has
+never seen. This section reads it off in three steps: the two parameters that
+describe the population, the population they imply, and what that population
+does to the individual estimates.
+
+\subsection{The estimated population: $\bar\alpha$ and $\sigma$}
 
 \begin{table}[h!]
 \centering
@@ -368,11 +403,94 @@ scale is $\text{logit}^{-1}(2.88) = 0.947$ as a probability, or $1 + 4(0.947) =
 population mean of the full data set. And $\sigma = 0.62$ says how far listings
 genuinely differ from one another once sampling noise has been accounted for.
 It is not zero, so listings really do vary; it is also well below $1.5$, which
-is the fixed prior the no-pooling model was using, and that comparison is what
-decides the next section.
+is the fixed prior the no-pooling model was using --- the model has decided that
+listings are four times more alike than that prior assumed, and everything below
+follows from that one number.
+
+\subsection{From log-odds to stars: the population on both scales}
+
+Those two numbers are not just summaries; together they \emph{are} the estimated
+population, $\text{Normal}(\bar\alpha, \sigma)$, and we can draw it.
+
+\begin{figure}[h!]
+\centering
+\includegraphics[width=0.95\textwidth]{05-population.png}
+\caption{Left: one hundred draws of the population distribution of listings on
+the log-odds scale, each curve a $\text{Normal}(\bar\alpha, \sigma)$ using one
+posterior sample. The spread of the curves is uncertainty about the population;
+the width of each curve is the variation among listings. Right: $8{,}000$
+simulated listings pushed through the inverse logit, so the horizontal axis is
+the probability of a positive experience, with the implied star rating marked
+on top.}
+\end{figure}
+
+\begin{lstlisting}
+post <- extract.samples( m13.2 )
+plot( NULL , xlim=c(0,6) , ylim=c(0,0.8) ,
+      xlab="log-odds of a positive experience" , ylab="density" )
+for ( i in 1:100 )
+    curve( dnorm(x,post$a_bar[i],post$sigma[i]) , add=TRUE ,
+           col=col.alpha("black",0.2) )
+
+sim_listings <- rnorm( 8000 , post$a_bar , post$sigma )
+dens( inv_logit(sim_listings) , lwd=2 , adj=0.1 )
+\end{lstlisting}
+
+The transformation matters. On the log-odds scale the population is a symmetric
+bell. On the probability scale it is strongly skewed, piled up near $1$ with a
+long tail reaching down. That asymmetry is not something we assumed; it is what
+a symmetric distribution becomes once it is squeezed through the inverse logit
+near the top of its range. It is also a fair description of Airbnb: most
+listings are fine, and the interesting variation is all on the downside.
+
+\subsection{Shrinkage: the pooling goes where the evidence is thin}
+
+\begin{figure}[h!]
+\centering
+\includegraphics[width=\textwidth]{06-shrinkage.png}
+\caption{Filled points are the empirical ratings, open points the posterior
+means, and the segment between them is what pooling did. The dashed line is the
+population mean $\text{logit}^{-1}(\bar\alpha)$. Listings are sorted by review
+count, with the bands marked along the top.}
+\end{figure}
+
+The picture is the one Chapter 13 promises. On the left, where listings have one
+or two reviews, the segments are long and every one of them points toward the
+dashed line. On the right, where listings have fifty reviews or more, the open
+and filled points sit on top of each other. Nothing was done to the model to
+produce this gradient. It follows from the binomial likelihood: a count out of
+$400$ trials is sharp evidence and overwhelms the prior, while a count out of
+one trial is almost no evidence and the prior wins.
+
+\begin{table}[h!]
+\centering
+\begin{tabular}{lrrrr}
+\toprule
+reviews & mean shift & spread before & spread after & \textbf{shrink factor} \\
+\midrule
+1--2   & 0.327 & 0.314 & 0.032 & \textbf{0.899} \\
+3--5   & 0.396 & 0.445 & 0.059 & 0.869 \\
+6--10  & 0.214 & 0.257 & 0.045 & 0.826 \\
+11--50 & 0.111 & 0.168 & 0.063 & 0.625 \\
+50+    & 0.047 & 0.116 & 0.070 & \textbf{0.395} \\
+\bottomrule
+\end{tabular}
+\caption{All quantities in rating points. ``Spread'' is the mean distance from
+the population mean, before and after pooling; the shrink factor is
+$1 - \text{after}/\text{before}$.}
+\end{table}
+
+One column in that table is not monotone and the reason is instructive. The
+mean shift for one-to-two-review listings ($0.327$) is \emph{smaller} than for
+three-to-five ($0.396$). This is not an error. A listing with a single review is
+almost always rated exactly $5.0$, and $5.0$ is only about $0.2$ rating points
+above the population mean of $4.79$, so there is very little distance to travel
+even though nearly all of it is taken away. The shrink factor, which measures
+the \emph{fraction} of the gap that pooling closes, is the honest summary, and
+it falls monotonically from $0.90$ to $0.40$.
 
 %==============================================================================
-\section{Comparing the models}
+\section{Comparing the Three Models I: Which Predicts Best?}
 %==============================================================================
 
 \begin{table}[h!]
@@ -435,265 +553,36 @@ inflates the variance of the log-likelihood, which is what pWAIC measures. The
 comparison survives either way --- $37.5$ beats both --- so the multilevel
 model's advantage is not an artifact of the prior we happened to choose.
 
-Complete pooling, \texttt{m13.0}, is the other extreme: a single intercept
-shared by every listing, which says the listings do not differ at all and every
-gap between them is sampling noise. Its pWAIC of $2.8$ is the smallest in the
-table, and it is the \emph{only} model whose effective parameter count is close
+Complete pooling, \texttt{m13.0}, sits at the other extreme. Its pWAIC of $2.8$
+is the smallest in the table, and it is the \emph{only} model whose effective parameter count is close
 to its actual one --- with one parameter there is nothing for the data to
 overfit. It still loses to partial pooling by $62$ WAIC, because the listings
 genuinely do differ: $\sigma = 0.62$ is small but it is not zero.
 
 So the table brackets the answer. Complete pooling is too rigid and underfits;
 no pooling is too free and overfits; partial pooling sits between them and beats
-both. That ordering is what the whole chapter is about, and Appendix A tests it
-where the truth is actually known rather than inferred from WAIC.
+both. That ordering is what the whole chapter is about --- but WAIC only
+\emph{estimates} out-of-sample accuracy, and it estimates it from the same data
+the models were fitted to. The next section repeats the comparison in a setting
+where nothing has to be estimated, because the truth is known by construction.
 
 %==============================================================================
-\section{The population of listings}
+\section{Comparing the Three Models II: Which Recovers the Truth?}
 %==============================================================================
 
-A multilevel model does not only estimate $200$ intercepts. It estimates the
-\emph{distribution} those intercepts were drawn from, and that is what allows it
-to say anything at all about a listing it has never seen.
+WAIC ranked the models by how well they are expected to predict. That is a
+useful ranking, but it is an inference: nowhere in the table above does a true
+value appear. In real data the true probability $p_i^{\text{true}}$ behind each
+listing is unobservable --- we see only the noisy outcome
+$P_i \sim \text{Binomial}(N_i, p_i)$ --- so ``partial pooling is closer to the
+truth'' is a claim we cannot check directly on Airbnb.
 
-\begin{figure}[h!]
-\centering
-\includegraphics[width=0.95\textwidth]{05-population.png}
-\caption{Left: one hundred draws of the population distribution of listings on
-the log-odds scale, each curve a $\text{Normal}(\bar\alpha, \sigma)$ using one
-posterior sample. The spread of the curves is uncertainty about the population;
-the width of each curve is the variation among listings. Right: $8{,}000$
-simulated listings pushed through the inverse logit, so the horizontal axis is
-the probability of a positive experience, with the implied star rating marked
-on top.}
-\end{figure}
-
-\begin{lstlisting}
-post <- extract.samples( m13.2 )
-plot( NULL , xlim=c(0,6) , ylim=c(0,0.8) ,
-      xlab="log-odds of a positive experience" , ylab="density" )
-for ( i in 1:100 )
-    curve( dnorm(x,post$a_bar[i],post$sigma[i]) , add=TRUE ,
-           col=col.alpha("black",0.2) )
-
-sim_listings <- rnorm( 8000 , post$a_bar , post$sigma )
-dens( inv_logit(sim_listings) , lwd=2 , adj=0.1 )
-\end{lstlisting}
-
-The transformation matters. On the log-odds scale the population is a symmetric
-bell. On the probability scale it is strongly skewed, piled up near $1$ with a
-long tail reaching down. That asymmetry is not something we assumed; it is what
-a symmetric distribution becomes once it is squeezed through the inverse logit
-near the top of its range. It is also a fair description of Airbnb: most
-listings are fine, and the interesting variation is all on the downside.
-
-%==============================================================================
-\section{Shrinkage}
-%==============================================================================
-
-\begin{figure}[h!]
-\centering
-\includegraphics[width=\textwidth]{06-shrinkage.png}
-\caption{Filled points are the empirical ratings, open points the posterior
-means, and the segment between them is what pooling did. The dashed line is the
-population mean $\text{logit}^{-1}(\bar\alpha)$. Listings are sorted by review
-count, with the bands marked along the top.}
-\end{figure}
-
-The picture is the one Chapter 13 promises. On the left, where listings have one
-or two reviews, the segments are long and every one of them points toward the
-dashed line. On the right, where listings have fifty reviews or more, the open
-and filled points sit on top of each other. Nothing was done to the model to
-produce this gradient. It follows from the binomial likelihood: a count out of
-$400$ trials is sharp evidence and overwhelms the prior, while a count out of
-one trial is almost no evidence and the prior wins.
-
-\begin{table}[h!]
-\centering
-\begin{tabular}{lrrrr}
-\toprule
-reviews & mean shift & spread before & spread after & \textbf{shrink factor} \\
-\midrule
-1--2   & 0.327 & 0.314 & 0.032 & \textbf{0.899} \\
-3--5   & 0.396 & 0.445 & 0.059 & 0.869 \\
-6--10  & 0.214 & 0.257 & 0.045 & 0.826 \\
-11--50 & 0.111 & 0.168 & 0.063 & 0.625 \\
-50+    & 0.047 & 0.116 & 0.070 & \textbf{0.395} \\
-\bottomrule
-\end{tabular}
-\caption{All quantities in rating points. ``Spread'' is the mean distance from
-the population mean, before and after pooling; the shrink factor is
-$1 - \text{after}/\text{before}$.}
-\end{table}
-
-One column in that table is not monotone and the reason is instructive. The
-mean shift for one-to-two-review listings ($0.327$) is \emph{smaller} than for
-three-to-five ($0.396$). This is not an error. A listing with a single review is
-almost always rated exactly $5.0$, and $5.0$ is only about $0.2$ rating points
-above the population mean of $4.79$, so there is very little distance to travel
-even though nearly all of it is taken away. The shrink factor, which measures
-the \emph{fraction} of the gap that pooling closes, is the honest summary, and
-it falls monotonically from $0.90$ to $0.40$.
-
-%==============================================================================
-\section{Extension: what is $\sigma$ actually doing?}
-%==============================================================================
-
-Everything above rests on a claim that Chapter 13 makes but does not check: that
-$\sigma$ is a regularization strength, and that the model chooses a good one.
-That claim is testable.
-
-If $\sigma$ really is a regularizer, then fixing it by hand at the value the
-model chose ought to predict new data better than fixing it anywhere else. So:
-refit the multilevel model twelve times with $\sigma$ \emph{pinned} at values
-from $0.15$ to $2.5$, leaving $\bar\alpha$ free, and score each fit by
-cross-validation. If the claim holds, the cross-validation curve should peak
-where the posterior of $\sigma$ peaked in the model that estimated it.
-
-\begin{lstlisting}
-sigma_grid <- exp( seq( log(0.15) , log(2.5) , length.out=12 ) )
-
-for ( i in seq_along(sigma_grid) ) {
-    dat_s <- c( dat , list( sigma_fixed=sigma_grid[i] ) )
-    fits[[i]] <- ulam(
-      alist(
-        P ~ dbinom( N , p ),
-        logit(p) <- a[listing],
-        a[listing] ~ dnorm( a_bar , sigma_fixed ),
-        a_bar ~ dnorm( 0 , 1.5 )
-      ), data=dat_s , chains=4 , log_lik=TRUE )
-}
-\end{lstlisting}
-
-\subsection{Cross-validation needs care here}
-
-The obvious tool is \texttt{PSIS}, and the obvious tool is the wrong one. Every
-listing contributes exactly one observation, so dropping listing $i$ removes
-\emph{all} the information about $\alpha_i$. PSIS estimates what would happen if
-we dropped a point by reweighting a posterior that was fitted \emph{with} that
-point, and when the point is the only thing holding a parameter in place, that
-reweighting is being asked to do far too much. The Pareto $k$ diagnostic says so
-loudly: essentially every point is flagged.
-
-But the same fact that breaks PSIS makes the exact answer easy. With $\alpha_i$
-unconstrained by the remaining data, the leave-one-out prediction for listing
-$i$ is just the prediction for a brand new listing:
-\[
-  p(P_i \mid y_{-i}, \sigma)
-  = \int \text{Binomial}\big(P_i \mid N_i, \text{logit}^{-1}(a)\big)\,
-         \text{Normal}(a \mid \bar\alpha, \sigma)\, da ,
-\]
-averaged over the posterior of $\bar\alpha$. This needs no importance sampling
-at all --- draw $\bar\alpha$ from the posterior, draw $a$ around it, average the
-binomial density. It handles $\alpha_i$ exactly. Its only approximation is that
-it reuses the full-data posterior of $\bar\alpha$ rather than refitting without
-listing $i$, which moves $\bar\alpha$ by a fraction of its own posterior
-standard deviation when one listing in two hundred is removed.
-
-\subsection{The result}
-
-\begin{table}[h!]
-\centering
-\begin{tabular}{rrrrr}
-\toprule
-$\sigma$ & elpd PSIS & bad $k$ & elpd WAIC & \textbf{elpd direct} \\
-\midrule
-0.150 & $-268.0$ &  2 & $-267.6$ & $-265.7$ \\
-0.194 & $-265.2$ &  4 & $-264.5$ & $-263.1$ \\
-0.250 & $-260.6$ &  3 & $-259.3$ & $-260.0$ \\
-0.323 & $-257.1$ &  7 & $-254.2$ & $-256.8$ \\
-0.417 & $-252.3$ &  6 & $-248.7$ & $-253.9$ \\
-\textbf{0.539} & $-249.4$ & 16 & $-244.1$ & $\mathbf{-252.2}$ \\
-\textbf{0.696} & $\mathbf{-247.0}$ & 27 & $-240.0$ & $-252.3$ \\
-0.899 & $-247.4$ & 36 & $-238.1$ & $-255.3$ \\
-\textbf{1.161} & $-248.2$ & 45 & $\mathbf{-237.2}$ & $-261.8$ \\
-1.499 & $-252.4$ & 58 & $-237.7$ & $-272.2$ \\
-1.936 & $-257.7$ & 72 & $-239.7$ & $-286.6$ \\
-2.500 & $-264.4$ & 97 & $-241.9$ & $-304.4$ \\
-\bottomrule
-\end{tabular}
-\caption{Each row is a separate model with $\sigma$ pinned. Higher elpd is
-better; the best value in each column is bold. ``bad $k$'' counts the listings,
-out of $200$, whose Pareto $k$ exceeds $0.7$ --- the diagnostic that says PSIS
-should not be believed.}
-\end{table}
-
-\begin{figure}[h!]
-\centering
-\includegraphics[width=0.9\textwidth]{07-sigma-agreement.png}
-\caption{Top: out-of-sample score of each fixed-$\sigma$ model, by three
-criteria. Bottom: the posterior of $\sigma$ from the model that estimated it
-with a $\text{Exponential}(1)$ prior, with its $89\%$ interval shaded. The
-dashed line is the cross-validation optimum, carried down from the top panel.}
-\end{figure}
-
-\textbf{The direct cross-validation curve and the posterior land in the same
-place.} The curve is highest at $\sigma = 0.539$, with $\sigma = 0.696$ all but
-tied ($-252.2$ against $-252.3$), and the posterior mode of $0.623$ falls
-between those two adjacent grid points. Both sit comfortably inside the $89\%$
-interval $[0.456, 0.786]$.
-
-\textbf{A purely predictive criterion, which knows nothing about priors, and a purely
-Bayesian one, which never simulated a held-out data point, choose the same
-amount of pooling. The multilevel model found by regularization what
-cross-validation found by brute force.}
-
-Three honest caveats. The two quantities are not required to agree
-\emph{exactly}: they optimize related but different objectives, and the
-$\text{Exponential}(1)$ prior pulls the posterior mode slightly down relative to
-the cross-validation optimum. The grid is coarse, so it locates the optimum
-only to the nearest grid point. And the peak is \emph{flat}, so the data do not
-distinguish sharply between nearby amounts of pooling. What the curve does say
-sharply is that both ends are bad: pinning $\sigma$ at $0.15$ costs $13$ elpd
-and pinning it at $2.5$ costs $52$. The claim is agreement, not identity.
-
-The disagreement between the criteria is a result in its own right. Both PSIS
-and WAIC peak at \emph{larger} $\sigma$ than the direct computation --- one grid
-step for PSIS, three for WAIC --- that is, they recommend \emph{less} pooling
-than is good for prediction. The reason is the same one that made PSIS
-unreliable: both estimate the cost of a held-out point using a posterior in
-which that point's own parameter was fitted to it. They therefore undercount how
-much flexibility the model is using, and a model whose flexibility is
-undercounted looks like it can afford more.
-
-The bad-$k$ column tracks the damage. It climbs from $2$ at $\sigma = 0.15$ to
-$97$ at $\sigma = 2.5$, and stands at $27$ at the very $\sigma$ that PSIS
-nominates --- the diagnostic is loudest exactly where the answer is being read
-off. The direct computation has no such blind spot. It is a useful reminder that
-an information criterion is an approximation, and that approximations have
-assumptions --- one observation per cluster violates this one.
-
-%==============================================================================
-\section{Conclusion}
-%==============================================================================
-
-Starting from the observation that a rating computed from two reviews is not the
-same kind of number as a rating computed from four hundred, we wrote down a
-generative story in which reviews are trials and ratings are proportions, and
-that story turned out to be the Reed frog model. Fitting it required attention
-to the geometry of the posterior rather than to the model itself: the
-reparameterization $\alpha_j = \bar\alpha + z_j \sigma$ changes nothing about
-what is being estimated and everything about how well it can be estimated.
-
-The comparison delivered the chapter's central result. The multilevel model has
-two more parameters than the no-pooling model and uses a third as many of them,
-because it learned its own regularization instead of being handed one. The
-shrinkage plot showed where that regularization goes: almost entirely onto the
-listings with the least evidence, and almost not at all onto the listings with
-the most.
-
-Finally, pinning $\sigma$ by hand and scoring the result by cross-validation
-confirmed that the $\sigma$ the model estimates is the $\sigma$ that predicts
-best. Along the way it also showed that the standard tools for that scoring,
-PSIS and WAIC, cannot be trusted when every cluster holds a single observation
---- which is worth knowing, because it is a common shape for data to have.
-
-%==============================================================================
-\appendix
-\section{Simulation Study: Evaluating Estimation Error Against Known Truth}
-%==============================================================================
-
-In real observational data, the true underlying probability $p_i^{\text{true}}$ for each listing is unobservable; we observe only the noisy sample outcome $P_i \sim \text{Binomial}(N_i, p_i)$. To evaluate how accurately complete pooling, no pooling, and partial pooling recover the true underlying probabilities, we conduct a controlled simulation study following Section 13.2 of \emph{Statistical Rethinking} (R code 13.9--13.20).
+Simulation removes that obstacle. If we \emph{generate} the listings ourselves,
+we know every $p_i^{\text{true}}$, and we can ask the sharper question directly:
+which of the three models comes closest to the numbers that actually produced
+the data? This is the controlled study of Section 13.2 of \emph{Statistical
+Rethinking} (R code 13.9--13.20), run here with the parameters our own model
+estimated.
 
 We simulate $K = 60$ listings, divided into four review-count groups of 15 listings each with $N_i \in \{2, 5, 15, 50\}$. We examine two distinct data-generating scenarios:
 \begin{enumerate}
@@ -743,13 +632,205 @@ discussed below.}
 \label{fig:simulation_error}
 \end{figure}
 
-\subsection{Key Findings from the Simulation}
+\subsection{What the simulation shows}
 
 The simulation highlights two critical theoretical insights:
 \begin{enumerate}
   \item \textbf{Adaptive trade-off in low vs.\ high variance regimes:} When population variance is tight ($\sigma = 0.62$, Fitted scenario), complete pooling is surprisingly competitive ($\text{MAE} = 0.0260$) because listings are genuinely similar --- it is in fact the better estimator for the sparsest listings, beating partial pooling at $N_i = 2$ ($0.0296$ against $0.0320$). Partial pooling still wins overall ($\text{MAE} = 0.0243$) by allowing listings with large sample sizes ($N_i=50$) to deviate appropriately. When population variance is high ($\sigma = 1.50$, Textbook scenario), complete pooling fails severely ($\text{MAE} = 0.1702$) due to underfitting, and partial pooling wins in every group. The lesson is that partial pooling is never much worse than the better of the two extremes, while each extreme is badly wrong in one of the two regimes.
   \item \textbf{Protection against sampling noise for low $N_i$:} For listings with only 2 reviews ($N_i = 2$), no pooling suffers catastrophic estimation errors ($\text{MAE} = 0.1122$ in Fitted, $0.2097$ in Textbook) because a single binomial outcome produces extreme estimates ($0.0, 0.5,$ or $1.0$). Partial pooling shrinks these estimates toward $\bar\alpha$, reducing the error for $N_i=2$ by nearly $70\%$ in the Fitted scenario ($0.0320$ vs $0.1122$) and $44\%$ in the Textbook scenario ($0.1179$ vs $0.2097$).
 \end{enumerate}
+
+%==============================================================================
+\section{Is $\sigma$ Really a Regularizer? A Cross-Validation Check}
+%==============================================================================
+
+Everything above rests on a claim that Chapter 13 makes but does not check: that
+$\sigma$ is a regularization strength, and that the model chooses a good one.
+That claim is testable.
+
+If $\sigma$ really is a regularizer, then fixing it by hand at the value the
+model chose ought to predict new data better than fixing it anywhere else. So:
+refit the multilevel model twelve times with $\sigma$ \emph{pinned} at values
+from $0.15$ to $2.5$, leaving $\bar\alpha$ free, and score each fit by
+cross-validation. If the claim holds, the cross-validation curve should peak
+where the posterior of $\sigma$ peaked in the model that estimated it.
+
+\begin{lstlisting}
+sigma_grid <- exp( seq( log(0.15) , log(2.5) , length.out=12 ) )
+
+for ( i in seq_along(sigma_grid) ) {
+    dat_s <- c( dat , list( sigma_fixed=sigma_grid[i] ) )
+    fits[[i]] <- ulam(
+      alist(
+        P ~ dbinom( N , p ),
+        logit(p) <- a[listing],
+        a[listing] ~ dnorm( a_bar , sigma_fixed ),
+        a_bar ~ dnorm( 0 , 1.5 )
+      ), data=dat_s , chains=4 , log_lik=TRUE )
+}
+\end{lstlisting}
+
+\subsection{What PSIS is, and why it breaks here}
+
+\paragraph{The idea.} Leave-one-out cross-validation asks: how well would the
+model have predicted listing $i$ if it had never seen listing $i$? Answering
+that honestly means refitting the model two hundred times, once per listing,
+which is expensive. PSIS is the shortcut. Fit \emph{once} on all the data, then
+reuse those posterior draws to imitate a fit that excluded listing $i$, by
+giving each draw a weight
+\[
+  w_i^{(s)} \;=\; \frac{1}{p\big(P_i \mid \theta^{(s)}\big)} .
+\]
+The logic: a draw that explained listing $i$ very well is a draw that listing
+$i$ pulled the fit toward, so play it down; a draw that explained it poorly is
+one the fit would have been free to visit without listing $i$, so play it up.
+Reweight, average, and you have an estimate of the held-out score for free.
+
+\paragraph{Where the ``PS'' comes in.} Those weights are a ratio of
+probabilities, and ratios can explode: a handful of draws can end up carrying
+almost all the weight, and an average dominated by three draws is not an average.
+So PSIS (\underline{P}areto \underline{S}moothed \underline{I}mportance
+\underline{S}ampling) fits a Pareto distribution to the largest weights and
+replaces them with the smoothed fit. That Pareto has a shape parameter $k$,
+which measures how heavy the tail of the weights is, and it doubles as the
+warning light: $k > 0.7$ means the estimate for that point rests on too few
+draws and should not be believed.
+
+\paragraph{Why it breaks here.} Reweighting can only work if the with-the-point
+posterior and the without-the-point posterior actually overlap --- you cannot
+reweight your way somewhere your draws never went. Here they barely overlap at
+all. Every listing contributes exactly one observation, so $\alpha_i$ is held in
+place by listing $i$ and by nothing else. Delete listing $i$ and its intercept
+has no data left: its posterior widens from a tight bump to the entire
+population distribution $\text{Normal}(\bar\alpha,\sigma)$. The draws we have
+are clustered in the tight bump, so no reweighting of them can reproduce the
+wide one, and $k$ duly goes red almost everywhere.
+
+\paragraph{The exact answer instead.} That same fact --- $\alpha_i$ is
+unconstrained once listing $i$ is gone --- is what makes the shortcut
+unnecessary. If nothing is known about $\alpha_i$, then predicting listing $i$
+without it is just predicting a \emph{brand new} listing drawn from the
+population:
+\[
+  p(P_i \mid y_{-i}, \sigma)
+  = \int \text{Binomial}\big(P_i \mid N_i, \text{logit}^{-1}(a)\big)\,
+         \text{Normal}(a \mid \bar\alpha, \sigma)\, da ,
+\]
+averaged over the posterior of $\bar\alpha$. No importance sampling: draw
+$\bar\alpha$ from the posterior, draw $a$ around it, average the binomial
+density. Its only approximation is reusing the full-data posterior of
+$\bar\alpha$ instead of refitting without listing $i$ --- and dropping one
+listing in two hundred moves $\bar\alpha$ by a fraction of its own posterior
+standard deviation. This is the ``direct'' column below.
+
+\subsection{Results: the curve and the posterior agree}
+
+\begin{table}[h!]
+\centering
+\begin{tabular}{rrrrr}
+\toprule
+$\sigma$ & elpd PSIS & bad $k$ & elpd WAIC & \textbf{elpd direct} \\
+\midrule
+0.150 & $-268.0$ &  2 & $-267.6$ & $-265.7$ \\
+0.194 & $-265.2$ &  4 & $-264.5$ & $-263.1$ \\
+0.250 & $-260.6$ &  3 & $-259.3$ & $-260.0$ \\
+0.323 & $-257.1$ &  7 & $-254.2$ & $-256.8$ \\
+0.417 & $-252.3$ &  6 & $-248.7$ & $-253.9$ \\
+\textbf{0.539} & $-249.4$ & 16 & $-244.1$ & $\mathbf{-252.2}$ \\
+\textbf{0.696} & $\mathbf{-247.0}$ & 27 & $-240.0$ & $-252.3$ \\
+0.899 & $-247.4$ & 36 & $-238.1$ & $-255.3$ \\
+\textbf{1.161} & $-248.2$ & 45 & $\mathbf{-237.2}$ & $-261.8$ \\
+1.499 & $-252.4$ & 58 & $-237.7$ & $-272.2$ \\
+1.936 & $-257.7$ & 72 & $-239.7$ & $-286.6$ \\
+2.500 & $-264.4$ & 97 & $-241.9$ & $-304.4$ \\
+\bottomrule
+\end{tabular}
+\caption{Each row is a separate model with $\sigma$ pinned. Higher elpd is
+better; the best value in each column is bold. ``bad $k$'' counts the listings,
+out of $200$, whose Pareto $k$ exceeds $0.7$ --- the diagnostic that says PSIS
+should not be believed.}
+\end{table}
+
+\begin{figure}[h!]
+\centering
+\includegraphics[width=0.9\textwidth]{07-sigma-agreement.png}
+\caption{Top: out-of-sample score of each fixed-$\sigma$ model, by three
+criteria. Bottom: the posterior of $\sigma$ from the model that estimated it
+with a $\text{Exponential}(1)$ prior, with its $89\%$ interval shaded. The
+dashed line is the cross-validation optimum, carried down from the top panel.}
+\end{figure}
+
+\textbf{The direct cross-validation curve and the posterior land in the same
+place.} The curve is highest at $\sigma = 0.539$, with $\sigma = 0.696$ all but
+tied ($-252.2$ against $-252.3$), and the posterior mode of $0.623$ falls
+between those two adjacent grid points, comfortably inside the $89\%$ interval
+$[0.456, 0.786]$. A purely predictive criterion, which knows nothing about
+priors, and a purely Bayesian one, which never simulated a held-out data point,
+choose the same amount of pooling: \textbf{the multilevel model found by
+regularization what cross-validation found by brute force.} The claim is
+agreement, not identity --- the grid is coarse, the peak is flat, and the
+$\text{Exponential}(1)$ prior pulls the mode slightly down. What the curve does
+say sharply is that both ends are bad: pinning $\sigma$ at $0.15$ costs $13$
+elpd, and at $2.5$ it costs $52$.
+
+\paragraph{Why PSIS and WAIC miss the mode.} Both peak at \emph{larger} $\sigma$
+than the direct computation --- one grid step for PSIS, three for WAIC --- so
+both recommend \emph{less} pooling than actually predicts well. The cause is the
+overlap problem from above. Neither ever really removes listing $i$: both score
+it using a posterior in which $\alpha_i$ had already been fitted to that very
+listing. The ``held-out'' score is therefore partly in-sample, and it is
+\emph{most} in-sample when $\sigma$ is large, because a large $\sigma$ is exactly
+what lets each $\alpha_i$ run off and match its own single observation. Larger
+$\sigma$ thus buys a flattery the direct computation refuses to pay, and the
+peak slides to the right.
+
+The bad-$k$ column tracks the damage: it climbs from $2$ at $\sigma = 0.15$ to
+$97$ at $\sigma = 2.5$, and already stands at $27$ at the $\sigma$ PSIS
+nominates --- the warning light is brightest exactly where the answer is being
+read off. An information criterion is an approximation, and approximations have
+assumptions; one observation per cluster violates this one.
+
+%==============================================================================
+\section{Conclusions}
+%==============================================================================
+
+Starting from the observation that a rating computed from two reviews is not the
+same kind of number as a rating computed from four hundred, we wrote down a
+generative story in which reviews are trials and ratings are proportions, and
+that story turned out to be the Reed frog model. Fitting it required attention
+to the geometry of the posterior rather than to the model itself: the
+reparameterization $\alpha_j = \bar\alpha + z_j \sigma$ changes nothing about
+what is being estimated and everything about how well it can be estimated.
+
+The comparison delivered the chapter's central result, twice over. By WAIC, the
+multilevel model has two more parameters than the no-pooling model and uses a
+third as many of them, because it learned its own regularization instead of
+being handed one; the shrinkage plot showed where that regularization goes,
+almost entirely onto the listings with the least evidence and almost not at all
+onto the listings with the most. Against a simulated ground truth, where the
+right answer is known rather than estimated, the same ordering held: partial
+pooling had the lowest error in both the tight-$\sigma$ and the wide-$\sigma$
+regime, while each of the two extremes was badly wrong in one of them. That the
+two criteria agree matters, because WAIC is scored on the same data the models
+were fitted to and the simulation is not.
+
+Finally, pinning $\sigma$ by hand and scoring the result by cross-validation
+confirmed that the $\sigma$ the model estimates is the $\sigma$ that predicts
+best. Along the way it also showed that the standard tools for that scoring,
+PSIS and WAIC, cannot be trusted when every cluster holds a single observation
+--- which is worth knowing, because it is a common shape for data to have.
+
+%==============================================================================
+\appendix
+\section{Hamiltonian Monte Carlo}
+%==============================================================================
+
+Section 4 leaned on the geometry of the posterior --- trajectories, step sizes,
+divergences, energy --- without saying where any of it comes from. That material
+is written up separately, in \textbf{the appendix about HMC of posterior distribution approximation}, which builds
+Hamiltonian Monte Carlo from the physical analogy up and explains why the funnel
+is hard for it and why the non-centered parameterization fixes that. It is a
+standalone document, nothing in this report depends on reading it first.
 
 %==============================================================================
 \begin{thebibliography}{9}
