@@ -1,0 +1,16 @@
+Mean absolute error against the KNOWN true probability
+60 simulated listings, 15 at each of 2/5/15/50 reviews
+
+overall:
+  fitted  complete 0.0260 | no pooling 0.0651 | partial 0.0243
+  book    complete 0.1702 | no pooling 0.1145 | partial 0.0844
+
+ scenario reviews complete_pooling no_pooling partial_pooling
+   fitted       2           0.0296     0.1122          0.0320
+   fitted       5           0.0310     0.0718          0.0289
+   fitted      15           0.0166     0.0447          0.0167
+   fitted      50           0.0269     0.0318          0.0198
+     book       2           0.1913     0.2097          0.1179
+     book       5           0.2021     0.1234          0.1081
+     book      15           0.1117     0.0725          0.0592
+     book      50           0.1758     0.0526          0.0525

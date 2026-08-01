@@ -12,10 +12,14 @@ behind it.
 |---|---|---|---|---|---|
 | `partial` | **202** | **485.1** | 0.0 | — | **37.5** |
 | `no_pooling_flat` — `Normal(0,5)` | 200 | 508.3 | 23.2 | 14.7 | 73.3 |
+| `complete_pooling` | 1 | 547.5 | 62.4 | 22.5 | 2.8 |
 | `no_pooling` — `Normal(0,1.5)` | 200 | 690.2 | 205.1 | 18.7 | 112.1 |
 
-The multilevel model has the most actual parameters and the fewest effective
-ones, which is the chapter's central claim.
+The multilevel model has the most actual parameters and nearly the fewest
+effective ones, which is the chapter's central claim. Complete pooling is the
+only model whose effective count (2.8) is close to its actual one (1) — with a
+single parameter there is nothing to overfit — and it still loses by 62 WAIC,
+because `sigma = 0.62` is small but not zero.
 
 **The flat prior comes out backwards from the naive expectation.**
 `no_pooling_flat` has the *wider* prior and the *lower* pWAIC of the two
@@ -130,6 +134,42 @@ closed. That was unstable and produced values above 1, because the denominator
 `p_emp − p̄` is near zero for exactly those low-`N` listings. `shrink_factor`
 compares aggregate spread before and after — a ratio of means rather than a mean
 of ratios — and decays cleanly from 0.90 to 0.40.
+
+## 6. The simulation says the ranking depends on σ, and WAIC cannot see that
+
+Every comparison above ranks models without ever seeing the truth. `src/10-simulation.R`
+simulates 60 listings from a *known* `a_bar` and `sigma`, so error can be
+measured directly. Mean absolute error against the true probability:
+
+| scenario | reviews | complete | no pooling | partial |
+|---|---|---|---|---|
+| fitted, σ = 0.62 | 2 | **0.0296** | 0.1122 | 0.0320 |
+| | 5 | 0.0310 | 0.0718 | **0.0289** |
+| | 15 | **0.0166** | 0.0447 | 0.0167 |
+| | 50 | 0.0269 | 0.0318 | **0.0198** |
+| | **overall** | 0.0260 | 0.0651 | **0.0243** |
+| book, σ = 1.50 | 2 | 0.1913 | 0.2097 | **0.1179** |
+| | 5 | 0.2021 | 0.1234 | **0.1081** |
+| | 15 | 0.1117 | 0.0725 | **0.0592** |
+| | 50 | 0.1758 | 0.0526 | **0.0525** |
+| | **overall** | 0.1702 | 0.1145 | **0.0844** |
+
+**Two scenarios, because one would have misled.** Running only the fitted
+parameters makes complete pooling look nearly as good as partial pooling
+(0.0260 against 0.0243), and it actually *wins* at `N = 2`. That is not an
+error — with `sigma = 0.62` the listings genuinely are nearly identical, so
+throwing away all between-listing information costs little.
+
+Switch to the book's `sigma = 1.50` and complete pooling becomes the *worst*
+estimator (0.1702), while partial pooling wins every single group. The ordering
+of the two extremes flips entirely on a parameter the real data cannot hand you
+for free.
+
+So the honest claim is not "partial pooling always wins by a lot". It is that
+each extreme is badly wrong in one of the two regimes, and partial pooling is
+never much worse than whichever extreme happens to be right. That is the
+underfitting/overfitting trade-off of section 13.2, and it is invisible to
+WAIC on a single data set.
 
 ---
 

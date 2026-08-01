@@ -374,16 +374,18 @@ decides the next section.
 
 \begin{table}[h!]
 \centering
-\begin{tabular}{lrrrrr}
+\begin{tabular}{llrrrrr}
 \toprule
- & WAIC & SE & dWAIC & dSE & \textbf{pWAIC} \\
+ & params & WAIC & SE & dWAIC & dSE & \textbf{pWAIC} \\
 \midrule
-\texttt{m13.2}  multilevel        & 485.1 & 28.4 &   0.0 & --   & \textbf{37.5} \\
-\texttt{m13.1b} no pooling, flat  & 508.3 & 25.7 &  23.2 & 14.7 & 73.3 \\
-\texttt{m13.1}  no pooling, book  & 690.2 & 18.3 & 205.1 & 18.7 & 112.1 \\
+\texttt{m13.2}  partial pooling   & 202 & 485.1 & 28.4 &   0.0 & --   & \textbf{37.5} \\
+\texttt{m13.1b} no pooling, flat  & 200 & 508.3 & 25.7 &  23.2 & 14.7 & 73.3 \\
+\texttt{m13.0}  complete pooling  & 1   & 547.5 & 42.6 &  62.4 & 22.5 & \textbf{2.8} \\
+\texttt{m13.1}  no pooling, book  & 200 & 690.2 & 18.3 & 205.1 & 18.7 & 112.1 \\
 \bottomrule
 \end{tabular}
-\caption{\texttt{compare(m13.1, m13.1b, m13.2)}.}
+\caption{\texttt{compare(m13.0, m13.1, m13.1b, m13.2)}. \texttt{params} is the
+actual number of parameters, not the effective one.}
 \end{table}
 
 \begin{infobox}{WAIC and pWAIC}
@@ -425,6 +427,19 @@ and likelihood pull against each other for every listing, and that conflict
 inflates the variance of the log-likelihood, which is what pWAIC measures. The
 comparison survives either way --- $37.5$ beats both --- so the multilevel
 model's advantage is not an artifact of the prior we happened to choose.
+
+Complete pooling, \texttt{m13.0}, is the other extreme: a single intercept
+shared by every listing, which says the listings do not differ at all and every
+gap between them is sampling noise. Its pWAIC of $2.8$ is the smallest in the
+table, and it is the \emph{only} model whose effective parameter count is close
+to its actual one --- with one parameter there is nothing for the data to
+overfit. It still loses to partial pooling by $62$ WAIC, because the listings
+genuinely do differ: $\sigma = 0.62$ is small but it is not zero.
+
+So the table brackets the answer. Complete pooling is too rigid and underfits;
+no pooling is too free and overfits; partial pooling sits between them and beats
+both. That ordering is what the whole chapter is about, and Appendix A tests it
+where the truth is actually known rather than inferred from WAIC.
 
 %==============================================================================
 \section{The population of listings}
@@ -666,4 +681,68 @@ best. Along the way it also showed that the standard tools for that scoring,
 PSIS and WAIC, cannot be trusted when every cluster holds a single observation
 --- which is worth knowing, because it is a common shape for data to have.
 
+%==============================================================================
+\appendix
+\section{Simulation Study: Evaluating Estimation Error Against Known Truth}
+%==============================================================================
+
+In real observational data, the true underlying probability $p_i^{\text{true}}$ for each listing is unobservable; we observe only the noisy sample outcome $P_i \sim \text{Binomial}(N_i, p_i)$. To evaluate how accurately complete pooling, no pooling, and partial pooling recover the true underlying probabilities, we conduct a controlled simulation study following Section 13.2 of \emph{Statistical Rethinking} (R code 13.9--13.20).
+
+We simulate $K = 60$ listings, divided into four review-count groups of 15 listings each with $N_i \in \{2, 5, 15, 50\}$. We examine two distinct data-generating scenarios:
+\begin{enumerate}
+  \item \textbf{Fitted Airbnb scenario ($\bar\alpha = 2.88, \sigma = 0.62$):} Parameters estimated from the London dataset, characterized by high overall satisfaction ($\bar{p} \approx 0.947$) and tight population concentration ($\sigma = 0.62$).
+  \item \textbf{Textbook scenario ($\bar\alpha = 1.50, \sigma = 1.50$):} Parameters from McElreath's tadpole simulation, characterized by substantial population variation ($\sigma = 1.50$).
+\end{enumerate}
+
+For each simulated listing $i$, true log-odds $\alpha_i^{\text{true}} \sim \text{Normal}(\bar\alpha, \sigma)$ are drawn, giving true proportions $p_i^{\text{true}} = \text{logit}^{-1}(\alpha_i^{\text{true}})$, followed by observed counts $P_i \sim \text{Binomial}(N_i, p_i^{\text{true}})$. We fit complete pooling ($\hat{p}_i = \sum P_i / \sum N_i$), no pooling ($\hat{p}_i = P_i / N_i$), and partial pooling (posterior mean $\hat{p}_i = \mathbb{E}[\text{logit}^{-1}(\alpha_i) \mid \text{data}]$), measuring performance by the Mean Absolute Error (MAE):
+\[
+  \text{MAE} = \frac{1}{K} \sum_{i=1}^K \big|\hat{p}_i - p_i^{\text{true}}\big|.
+\]
+
+\begin{table}[h!]
+\centering
+\begin{tabular}{llrrr}
+\toprule
+Scenario & Reviews ($N_i$) & Complete Pooling & No Pooling & Partial Pooling \\
+\midrule
+\textbf{Fitted Airbnb} & 2  & \textbf{0.0296} & 0.1122 & 0.0320 \\
+($\bar\alpha=2.88, \sigma=0.62$) & 5  & 0.0310 & 0.0718 & \textbf{0.0289} \\
+ & 15 & \textbf{0.0166} & 0.0447 & 0.0167 \\
+ & 50 & 0.0269 & 0.0318 & \textbf{0.0198} \\
+ \cmidrule(lr){2-5}
+ & \textbf{Overall} & 0.0260 & 0.0651 & \textbf{0.0243} \\
+\midrule
+\textbf{Textbook} & 2  & 0.1913 & 0.2097 & \textbf{0.1179} \\
+($\bar\alpha=1.50, \sigma=1.50$) & 5  & 0.2021 & 0.1234 & \textbf{0.1081} \\
+ & 15 & 0.1117 & 0.0725 & \textbf{0.0592} \\
+ & 50 & 0.1758 & 0.0526 & \textbf{0.0525} \\
+ \cmidrule(lr){2-5}
+ & \textbf{Overall} & 0.1702 & 0.1145 & \textbf{0.0844} \\
+\bottomrule
+\end{tabular}
+\caption{Mean Absolute Error against ground truth $p_i^{\text{true}}$ across 60
+simulated listings (15 per review count group); the lowest error in each row is
+bold. Partial pooling achieves the lowest \emph{overall} error in both
+scenarios, but not every row: in the Fitted scenario complete pooling edges it
+out at $N_i = 2$ and ties it at $N_i = 15$, which is the tight-$\sigma$ effect
+discussed below.}
+\label{tab:simulation_error}
+\end{table}
+
+\begin{figure}[h!]
+\centering
+\includegraphics[width=0.98\textwidth]{08-simulation-error.png}
+\caption{Absolute error for each simulated listing against ground truth $p_i^{\text{true}}$. Blue points and solid lines represent no pooling; open circles and dashed black lines represent partial pooling. Left: Fitted Airbnb scenario ($\bar\alpha = 2.88, \sigma = 0.62$). Right: Textbook scenario ($\bar\alpha = 1.50, \sigma = 1.50$). Partial pooling prevents large errors in low-review listings while matching no-pooling performance when evidence ($N_i=50$) is high.}
+\label{fig:simulation_error}
+\end{figure}
+
+\subsection{Key Findings from the Simulation}
+
+The simulation highlights two critical theoretical insights:
+\begin{enumerate}
+  \item \textbf{Adaptive trade-off in low vs.\ high variance regimes:} When population variance is tight ($\sigma = 0.62$, Fitted scenario), complete pooling is surprisingly competitive ($\text{MAE} = 0.0260$) because listings are genuinely similar --- it is in fact the better estimator for the sparsest listings, beating partial pooling at $N_i = 2$ ($0.0296$ against $0.0320$). Partial pooling still wins overall ($\text{MAE} = 0.0243$) by allowing listings with large sample sizes ($N_i=50$) to deviate appropriately. When population variance is high ($\sigma = 1.50$, Textbook scenario), complete pooling fails severely ($\text{MAE} = 0.1702$) due to underfitting, and partial pooling wins in every group. The lesson is that partial pooling is never much worse than the better of the two extremes, while each extreme is badly wrong in one of the two regimes.
+  \item \textbf{Protection against sampling noise for low $N_i$:} For listings with only 2 reviews ($N_i = 2$), no pooling suffers catastrophic estimation errors ($\text{MAE} = 0.1122$ in Fitted, $0.2097$ in Textbook) because a single binomial outcome produces extreme estimates ($0.0, 0.5,$ or $1.0$). Partial pooling shrinks these estimates toward $\bar\alpha$, reducing the error for $N_i=2$ by nearly $70\%$ in the Fitted scenario ($0.0320$ vs $0.1122$) and $44\%$ in the Textbook scenario ($0.1179$ vs $0.2097$).
+\end{enumerate}
+
 \end{document}
+

@@ -6,6 +6,16 @@
 
 models <- list(
 
+  # Complete pooling. One intercept for every listing at once: the model says
+  # all listings are the same, and any difference between them is noise. The
+  # opposite extreme from no pooling, and the other thing partial pooling sits
+  # between.
+  complete_pooling = alist(
+    P ~ dbinom(N, p),
+    logit(p) <- a,
+    a ~ dnorm(0, 1.5)
+  ),
+
   # No pooling. Each listing gets its own intercept under a fixed prior, the
   # book's (R code 13.2). Note this prior is not weak on this scale: ratings
   # sit near 4.79, so logit(p) ~ 2.9, and Normal(0,1.5) pulls every listing
