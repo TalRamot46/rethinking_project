@@ -1,0 +1,18 @@
+WAIC comparison -- 200 listings
+
+m13.1  no pooling,  a[listing] ~ Normal(0, 1.5)   [book prior, R code 13.2]
+m13.1b no pooling,  a[listing] ~ Normal(0, 5)     [sensitivity: flat]
+m13.2  multilevel,  a[listing] ~ Normal(a_bar, sigma), non-centered
+
+         WAIC    SE  dWAIC   dSE  pWAIC weight
+m13.2  485.10 28.44   0.00    NA  37.46      1
+m13.1b 508.32 25.69  23.22 14.65  73.33      0
+m13.1  690.18 18.33 205.08 18.70 112.11      0
+
+actual number of parameters:
+  m13.1  = 200 
+  m13.1b = 200 
+  m13.2  = 202 
+
+The multilevel model has the MOST actual parameters and the FEWEST
+effective ones. That is the whole lesson of the chapter.

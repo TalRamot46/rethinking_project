@@ -1,0 +1,11 @@
+Rating noise by review count -- all usable listings
+
+    bin listings mean_rating sd_rating
+1   1-2    13995       4.568     0.865
+2   3-5    10615       4.655     0.496
+3  6-10     9959       4.699     0.341
+4 11-50    24332       4.741     0.239
+5   50+    11807       4.771     0.179
+
+listings with exactly 1 review: 8423 
+  of those, rated exactly 5.0: 6308 

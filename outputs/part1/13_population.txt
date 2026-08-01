@@ -1,0 +1,13 @@
+Posterior population of listings, simulated from a_bar and sigma
+
+log-odds scale:
+             mean        sd     5.5%    94.5%  histogram
+log_odds 2.885971 0.6402743 1.883915 3.915025 ▁▁▂▅▇▇▂▁▁▁
+
+probability scale:
+       mean         sd      5.5%     94.5% histogram
+p 0.9376882 0.03959199 0.8680601 0.9804498  ▁▁▁▁▁▂▇▇
+
+rating scale (1-5):
+           mean       sd     5.5%    94.5% histogram
+rating 4.750753 0.158368 4.472241 4.921799  ▁▁▁▁▁▂▇▇

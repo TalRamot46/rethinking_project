@@ -1,0 +1,20 @@
+# Raw Inside Airbnb exports. These are hundreds of megabytes and exceed
+# GitHub's 100 MB per-file limit, so they are never committed. Download them
+# separately and place them here; R/01-prepare-data.R reduces listings.csv to
+# the small data/ratings.csv that everything else reads.
+listings.csv
+reviews.csv
+
+# Derived data and cached posteriors -- all regenerable by running the pipeline
+data/
+.cache/
+outputs/*/fits/
+
+# LaTeX build artefacts
+*.aux
+*.log
+*.out
+*.toc
+*.synctex.gz
+*.fls
+*.fdb_latexmk
