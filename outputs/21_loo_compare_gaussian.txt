@@ -1,4 +1,0 @@
-        model elpd_diff se_diff p_worse diag_diff        diag_elpd
- m3 ApproachC       0.0     0.0      NA            58 k_psis > 0.7
- m1 ApproachA    -265.8    20.7    1.00            94 k_psis > 0.7
-  m0 unpooled    -646.1    36.7    1.00           772 k_psis > 0.7

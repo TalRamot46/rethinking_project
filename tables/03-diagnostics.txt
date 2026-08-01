@@ -1,0 +1,7 @@
+Sampler diagnostics over a_bar and sigma
+E-BFMI below 0.3 is a warning; n_eff is effectively
+independent draws, not iterations.
+
+        model divergent min_ebfmi max_rhat min_ess
+     centered         0     0.216    1.023     150
+ non-centered         0     0.736    1.001     714

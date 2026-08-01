@@ -1,0 +1,5 @@
+Hyperparameters of the multilevel model (non-centered)
+
+           mean         sd      5.5%     94.5%     rhat ess_bulk
+a_bar 2.8760853 0.09448387 2.7303574 3.0307775 1.000963 932.4039
+sigma 0.6166877 0.10255011 0.4556542 0.7862754 1.000586 714.1336

@@ -1,0 +1,6 @@
+8000 listings simulated from the posterior of a_bar and sigma
+
+              mean         sd      5.5%     94.5%    histogram
+log_odds 2.8743529 0.63401719 1.8768428 3.8685303 ▁▁▁▂▃▇▅▂▁▁▁▁
+p        0.9373277 0.03881049 0.8672481 0.9795384    ▁▁▁▁▁▁▂▇▇
+rating   4.7493109 0.15524196 4.4689922 4.9181535    ▁▁▁▁▁▁▂▇▇

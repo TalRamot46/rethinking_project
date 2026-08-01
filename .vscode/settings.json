@@ -1,0 +1,55 @@
+{
+  // LaTeX Workshop's default latexmk tool on this machine carried
+  //   "env": { "PATH": "C:\\Strawberry\\perl\\bin;%PATH%" }
+  // %PATH% is cmd.exe syntax. It is NOT expanded when the extension passes the
+  // environment to spawn(), so the build process received a PATH containing
+  // only Strawberry Perl plus a literal "%PATH%" entry -- no MiKTeX -- and
+  // failed with "spawn latexmk ENOENT".
+  //
+  // Both MiKTeX and Strawberry Perl are already on the system PATH, so the
+  // override is unnecessary. These definitions simply omit it.
+  "latex-workshop.latex.tools": [
+    {
+      "name": "latexmk",
+      "command": "latexmk",
+      "args": [
+        "--max-print-line=10000",
+        "-synctex=1",
+        "-interaction=nonstopmode",
+        "-file-line-error",
+        "-pdf",
+        "-outdir=%OUTDIR%",
+        "%DOC%"
+      ]
+    },
+    {
+      "name": "pdflatex",
+      "command": "pdflatex",
+      "args": [
+        "-synctex=1",
+        "-interaction=nonstopmode",
+        "-file-line-error",
+        "%DOC%"
+      ]
+    }
+  ],
+
+  // latexmk resolves the reruns itself. The pdflatex recipe is a fallback that
+  // needs no Perl at all.
+  "latex-workshop.latex.recipes": [
+    {
+      "name": "latexmk",
+      "tools": ["latexmk"]
+    },
+    {
+      "name": "pdflatex x2",
+      "tools": ["pdflatex", "pdflatex"]
+    }
+  ],
+
+  "latex-workshop.latex.clean.fileTypes": [
+    "*.aux", "*.bbl", "*.blg", "*.idx", "*.ind", "*.lof", "*.lot",
+    "*.out", "*.toc", "*.acn", "*.acr", "*.alg", "*.glg", "*.glo",
+    "*.gls", "*.fls", "*.fdb_latexmk", "*.synctex.gz"
+  ]
+}
