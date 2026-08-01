@@ -1,8 +1,0 @@
-                            model     WAIC  SE_WAIC    dWAIC        weight
-1  m3 Approach C (host + listing)  786.743 94.45235   0.0000  1.000000e+00
-2 m1 Approach A (listing pooling) 1282.983 85.29626 496.2396 1.749589e-108
-3        m0 unpooled (no pooling) 1639.742 48.36367 852.9986 5.938937e-186
-     pWAIC    LOOIC    p_loo bad_k
-1 145.7746  828.951 166.8786    58
-2 215.1249 1360.626 253.9466    94
-3 507.8944 2121.241 748.6441   772

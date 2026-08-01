@@ -1,0 +1,9 @@
+Rating noise by review count -- all usable listings
+70708 of 92638 raw rows usable
+
+   bin listings mean_rating sd_rating
+   1-2    13995       4.568     0.865
+   3-5    10615       4.655     0.496
+  6-10     9959       4.699     0.341
+ 11-50    24332       4.741     0.239
+   50+    11807       4.771     0.179

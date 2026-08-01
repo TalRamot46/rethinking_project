@@ -1,0 +1,10 @@
+WAIC comparison -- 200 listings, 5563 reviews
+
+no_pooling       a[listing] ~ Normal(0, 1.5)     200 parameters
+no_pooling_flat  a[listing] ~ Normal(0, 5)       200 parameters
+partial          a[listing] ~ Normal(a_bar, sigma)  202 parameters
+
+   WAIC    SE  dWAIC   dSE  pWAIC weight
+ 485.10 28.44   0.00    NA  37.46      1
+ 508.32 25.69  23.22 14.65  73.33      0
+ 690.18 18.33 205.08 18.70 112.11      0

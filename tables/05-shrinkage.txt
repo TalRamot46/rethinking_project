@@ -1,0 +1,9 @@
+Shrinkage by review count -- all units in rating points
+population mean rating: 4.786
+
+   bin listings mean_shift spread_before spread_after shrink_factor
+   1-2       40      0.327         0.314        0.032         0.899
+   3-5       40      0.396         0.445        0.059         0.869
+  6-10       40      0.214         0.257        0.045         0.826
+ 11-50       40      0.111         0.168        0.063         0.625
+   50+       40      0.047         0.116        0.070         0.395
