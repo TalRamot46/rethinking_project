@@ -13,6 +13,7 @@
 \usepackage{amsmath,amssymb,amsthm}
 \usepackage{enumitem}
 \usepackage[compact]{titlesec}
+\usepackage[hidelinks]{hyperref}
 
 \titlespacing*{\section}{0pt}{6pt}{3pt}
 
@@ -103,7 +104,7 @@ $O(D)$. The sampler can only shuffle along a shell it should be traversing.
 %==============================================================================
 
 HMC removes the random walk by giving the chain \emph{momentum}, so that a
-single proposal can traverse the typical set rather than jitter within it.
+single proposal can traverse the typical set rather than jitter within it (see Lecture 9 of McElreath's Statistical Rethinking playlist, \href{https://www.youtube.com/watch?v=Qqz5AJjyugM\&list=PLDcUM9US4XdMROZ57-OIRtIK0aOynbgZN\&index=9}{video link}~\cite{mcelreath2023_lecture09}).
 
 \paragraph{Phase space.} Augment the position $\boldsymbol{\theta} \in
 \mathbb{R}^{D}$ with an auxiliary momentum $\mathbf{p} \sim
@@ -199,7 +200,7 @@ position drift, and a second half kick:
     &= \mathbf{p}(t + \tfrac{\epsilon}{2})
        - \tfrac{\epsilon}{2}\nabla U(\boldsymbol{\theta}(t + \epsilon)).
 \end{align*}
-
+\paragraph{Fun Fact.} I use the Leapfrog integration method myself \underline{in my thesis}, which involves simulations of thermal radiation transfer coupled with hydrodynamic equations, in which conservation of total energy using a symplectic scheme is essential for simulating complex multi-physics schemes.
 \begin{thm}[Symplecticity and the shadow Hamiltonian]
 Each leapfrog step is a composition of shear maps, so it preserves phase volume
 \emph{exactly} ($\det J = 1$) and is time-reversible. Being symplectic, it
@@ -268,5 +269,11 @@ has broken down: where the posterior curves more sharply than $\epsilon$ can
 resolve, $\tilde{H}$ stops tracking $H$ and the region is under-explored, so
 divergences indicate bias rather than mere inefficiency --- which is why the
 main report reparameterises instead of ignoring them.
+
+%==============================================================================
+\begin{thebibliography}{9}
+\bibitem{mcelreath2023_lecture09}
+Richard McElreath, \emph{Statistical Rethinking 2023 - Lecture 09: Markov Chain Monte Carlo \& HMC}, YouTube video, \href{https://www.youtube.com/watch?v=Qqz5AJjyugM\&list=PLDcUM9US4XdMROZ57-OIRtIK0aOynbgZN\&index=9}{https://www.youtube.com/watch?v=Qqz5AJjyugM}.
+\end{thebibliography}
 
 \end{document}
