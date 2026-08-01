@@ -20,5 +20,6 @@ source("src/06-population.R")
 source("src/07-shrinkage.R")
 source("src/08-sigma-grid.R")
 source("src/09-sigma-figure.R")
+source("src/10-simulation.R")
 
 cat("\nDone. Figures in", FIGS, "and tables in", TABLES, "\n")
